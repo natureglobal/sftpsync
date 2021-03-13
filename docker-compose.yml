@@ -1,0 +1,19 @@
+version: '3'
+services:
+  sftpsync:
+    image: golang:1.16
+    command: go run ./cmd/sftpsync/main.go
+    environment:
+      TEST_SFTP_HOST: sftp:22
+      TEST_SFTP_USER: test-user
+      TEST_SFTP_PASSWORD: p4ssW0rd
+    depends_on:
+      - sftp
+    working_dir: /app
+    volumes:
+      - ${PWD}:/app
+  sftp:
+    image: atmoz/sftp
+    command: ["test-user:p4ssW0rd:::upload"]
+    ports:
+      - "3322:22"
