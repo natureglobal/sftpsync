@@ -15,8 +15,8 @@ sftpsync short description
 
 ## Synopsis
 
-```go
-// simple usage here
+```console
+% SFTP_PASSWORD=xxxx sftpsync -P 2222 -src ./public -dst htdocs user@example.com
 ```
 
 ## Description
