@@ -100,4 +100,13 @@ func TestAppGetRun(t *testing.T) {
 	if err == nil {
 		t.Errorf("something went wrong")
 	}
+
+	if err := removeDir(cli, dst); err != nil {
+		t.Error(err)
+	}
+
+	_, err = cli.Stat(dst)
+	if err == nil {
+		t.Errorf("something went wrong")
+	}
 }
