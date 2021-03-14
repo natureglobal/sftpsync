@@ -69,16 +69,18 @@ func (ap *app) run(ctx context.Context, outStream, errStream io.Writer) error {
 		if err != nil {
 			return err
 		}
+
+		dstPath := path.Join(ap.dst, relPath)
+		if d.IsDir() {
+			return cl.MkdirAll(dstPath)
+		}
+		log.Printf("transfer %s to %s\n", p, dstPath)
 		src, err := os.Open(p)
 		if err != nil {
 			return err
 		}
 		defer src.Close()
 
-		dstPath := path.Join(ap.dst, relPath)
-		if d.IsDir() {
-			return cl.MkdirAll(dstPath)
-		}
 		dst, err := cl.Create(dstPath) // XXX not atomic
 		if err != nil {
 			return err
