@@ -1,9 +1,11 @@
 package sftpsync
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Songmu/prompter"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -15,6 +17,10 @@ type sftpConfig struct {
 }
 
 func newSFTPClient(sc *sftpConfig) (*sftp.Client, error) {
+	if sc.identityFile == "" && sc.password == "" {
+		sc.password = prompter.Password(fmt.Sprintf("%s@%s's password", sc.user, sc.hostPort))
+	}
+
 	conf := &ssh.ClientConfig{
 		User:            sc.user,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // XXX
