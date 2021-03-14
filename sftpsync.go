@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/sftp"
 )
@@ -23,6 +24,7 @@ type app struct {
 	password     string
 	identityFile string
 	src, dst     string
+	workdir      string
 }
 
 const cmdName = "sftpsync"
@@ -40,6 +42,7 @@ func Run(ctx context.Context, argv []string, outStream, errStream io.Writer) err
 	fs.StringVar(&ap.src, "src", "", "source directory")
 	fs.StringVar(&ap.dst, "dst", "", "destination directory")
 	fs.StringVar(&ap.identityFile, "i", "", "identity file")
+	fs.StringVar(&ap.workdir, "W", "", "working directory")
 	if err := fs.Parse(argv); err != nil {
 		return err
 	}
@@ -61,7 +64,16 @@ func (ap *app) run(ctx context.Context, outStream, errStream io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return filepath.WalkDir(ap.src, func(p string, d fs.DirEntry, err error) error {
+
+	dst := strings.TrimSuffix(ap.dst, "/")
+	workBase := ap.workdir
+	if workBase == "" {
+		workBase = path.Dir(dst)
+	}
+	dirname := fmt.Sprintf(".%s-sftpsync%s", path.Base(dst), time.Now().Format("20060102150405"))
+	tmpDst := path.Join(workBase, dirname)
+	defer removeDir(cl, tmpDst)
+	if err := filepath.WalkDir(ap.src, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -70,7 +82,7 @@ func (ap *app) run(ctx context.Context, outStream, errStream io.Writer) error {
 			return err
 		}
 
-		dstPath := path.Join(ap.dst, relPath)
+		dstPath := path.Join(tmpDst, relPath)
 		if d.IsDir() {
 			return cl.MkdirAll(dstPath)
 		}
@@ -81,7 +93,7 @@ func (ap *app) run(ctx context.Context, outStream, errStream io.Writer) error {
 		}
 		defer src.Close()
 
-		dst, err := cl.Create(dstPath) // XXX not atomic
+		dst, err := cl.Create(dstPath) // not atomic
 		if err != nil {
 			return err
 		}
@@ -89,7 +101,39 @@ func (ap *app) run(ctx context.Context, outStream, errStream io.Writer) error {
 
 		_, err = io.Copy(dst, src)
 		return err
-	})
+	}); err != nil {
+		return err
+	}
+
+	bakDir := tmpDst + ".bak"
+	done := false
+	defer func() {
+		if !done {
+			cl.Rename(bakDir, dst)
+		}
+	}()
+
+	_, e := cl.Stat(dst)
+	backup := e == nil
+	if backup {
+		log.Printf("rename for backup from %s to %s\n", dst, bakDir)
+		if err := cl.Rename(dst, bakDir); err != nil {
+			return err
+		}
+	}
+	log.Printf("rename to sync from %s to %s\n", tmpDst, dst)
+	if err := cl.Rename(tmpDst, dst); err != nil {
+		return err
+	}
+	done = true
+
+	if backup {
+		if err := removeDir(cl, bakDir); err != nil {
+			return fmt.Errorf("sync complet but failed to cleanup backup dir: %s, %w", bakDir, err)
+		}
+	}
+	log.Println("✅ sync complete!")
+	return nil
 }
 
 var scpURLReg = regexp.MustCompile("^([^@]+@)?([^:]+)(?::(/?.+))?$")
