@@ -7,6 +7,7 @@ services:
       TEST_SFTP_HOST: sftp:22
       TEST_SFTP_USER: test-user
       TEST_SFTP_PASSWORD: p4ssW0rd
+      TEST_SFTP_KEY: testdata/keys/sftpsync_id_rsa
     depends_on:
       - sftp
     working_dir: /app
@@ -17,3 +18,5 @@ services:
     command: ["test-user:p4ssW0rd:::upload"]
     ports:
       - "3322:22"
+    volumes:
+      - ./testdata/keys:/home/test-user/.ssh/keys:ro
