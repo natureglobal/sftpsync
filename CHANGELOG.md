@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.2](https://github.com/natureglobal/sftpsync/compare/v0.0.1...v0.0.2) (2021-03-14)
+
+* include SHA256SUMS in releases [#6](https://github.com/natureglobal/sftpsync/pull/6) ([Songmu](https://github.com/Songmu))
+
 ## [v0.0.1](https://github.com/natureglobal/sftpsync/compare/991178dbbdb2...v0.0.1) (2021-03-14)
 
 * initial release [#5](https://github.com/natureglobal/sftpsync/pull/5) ([Songmu](https://github.com/Songmu))
